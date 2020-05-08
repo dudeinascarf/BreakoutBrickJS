@@ -6,10 +6,13 @@ const paddle = document.querySelector("#paddle");
 const startBtn = document.querySelector(".start");
 const gameOverBtn = document.querySelector(".gameOver");
 
-let gameOver = false;
-let gameStarted = true;
-let score = 0;
-let lives = 3;
+let livesText = document.querySelector(".lives");
+let scoreText = document.querySelector(".score");
+
+let gameOver = true;
+let gameStarted = false;
+let score;
+let lives;
 
 let animationRepeat;
 
@@ -21,12 +24,18 @@ let ballDir = {
 
 const containerDim = container.getBoundingClientRect();
 
+startBtn.addEventListener("click", startGame);
+document.addEventListener("keydown", keyDownHandler);
+document.addEventListener("keyup", keyUpHandler);
+
 function keyDownHandler(e) {
   e.preventDefault();
   if (e.key === "ArrowLeft") {
     paddle.left = true;
   } else if (e.key === "ArrowRight") {
     paddle.right = true;
+  } else if (e.key === "r" && !gameStarted) {
+    gameStarted = true;
   }
 }
 
@@ -40,20 +49,20 @@ function keyUpHandler(e) {
 }
 
 function startGame() {
-  gameOverBtn.style.display = "none";
-  ball.style.display = "block";
-  animationRepeat = requestAnimationFrame(update);
-  gameStarted = true;
-  gameOver = false;
+  if (gameOver) {
+    gameOverBtn.style.display = "none";
+    ball.style.display = "block";
+    lives = 3;
+    lifeUpdate();
+    animationRepeat = requestAnimationFrame(update);
+    gameOver = false;
+    gameStarted = false;
+  }
 }
-
-startBtn.addEventListener("click", startGame);
-document.addEventListener("keydown", keyDownHandler);
-document.addEventListener("keyup", keyUpHandler);
 
 function update() {
   if (gameOver === false) {
-    currPaddle = paddle.offsetLeft;
+    let currPaddle = paddle.offsetLeft;
     if (paddle.left && currPaddle > 0) {
       currPaddle -= 5;
     } else if (
@@ -85,7 +94,18 @@ function ballMoving() {
 
   if (x > containerDim.width - 20 || x < 0) {
     ballDir.x *= -1;
-  } else if (y > containerDim.height - 20 || y < 0) {
+  }
+  if (y > containerDim.height - 20 || y < 0) {
+    if (y > containerDim.height - 20) {
+      BallOffScreen();
+      return;
+    }
+    ballDir.y *= -1;
+  }
+
+  if (isCollide(ball, paddle)) {
+    let nDir = (x - paddle.offsetLeft - paddle.offsetWidth / 2) / 10;
+    ballDir.x = nDir;
     ballDir.y *= -1;
   }
 
@@ -94,4 +114,34 @@ function ballMoving() {
 
   ball.style.top = y + "px";
   ball.style.left = x + "px";
+}
+
+function stopper() {
+  gameStarted = false;
+  ballDir.x = 0;
+  ballDir.y = -5;
+  ballOnPaddle();
+  window.cancelAnimationFrame(animationRepeat);
+}
+
+function lifeUpdate() {
+  livesText.innerText = lives;
+}
+
+function BallOffScreen() {
+  lives--;
+  lifeUpdate();
+  stopper();
+}
+
+function isCollide(ballC, paddleC) {
+  let aRect = ballC.getBoundingClientRect();
+  let bRect = paddleC.getBoundingClientRect();
+
+  return !(
+    aRect.bottom < bRect.top ||
+    aRect.top > bRect.bottom ||
+    aRect.right < bRect.left ||
+    aRect.left > bRect.right
+  );
 }
